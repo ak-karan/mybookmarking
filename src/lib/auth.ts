@@ -78,7 +78,6 @@ export const authOptions: NextAuthOptions = {
             },
             $setOnInsert: {
               email,
-              authProvider: "google",
               role: isConfiguredAdmin(email) ? "admin" : "user",
             },
           },
