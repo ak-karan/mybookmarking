@@ -59,7 +59,13 @@ export function UrlBookmarkForm() {
     setIsSubmitting(true);
 
     try {
-      await createBookmark(formData);
+      const result = await createBookmark(formData);
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
       setUrl("");
       setFetchedUrl("");
       setMetadata(null);

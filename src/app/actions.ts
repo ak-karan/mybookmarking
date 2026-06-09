@@ -30,6 +30,15 @@ function validObjectId(value: string) {
   }
 }
 
+function isDuplicateKeyError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === 11000
+  );
+}
+
 async function requireUser() {
   const session = await auth();
 
@@ -76,18 +85,31 @@ export async function createBookmark(formData: FormData) {
     throw new Error("Title must be between 3 and 160 characters.");
   }
 
-  await Bookmark.create({
-    title,
-    url: normalizedUrl,
-    description,
-    tags,
-    categories: list(formData, "categories"),
-    user: user._id,
-  });
+  try {
+    await Bookmark.create({
+      title,
+      url: normalizedUrl,
+      description,
+      tags,
+      categories: list(formData, "categories"),
+      user: user._id,
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return {
+        ok: false as const,
+        error: "This URL is already in your bookmarks.",
+      };
+    }
+
+    throw error;
+  }
 
   revalidatePath("/");
   revalidatePath("/top-bookmarks");
   revalidatePath("/dashboard");
+
+  return { ok: true as const };
 }
 
 export async function voteBookmark(
