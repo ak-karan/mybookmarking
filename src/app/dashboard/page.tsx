@@ -54,7 +54,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     redirect("/auth");
   }
 
-  const [bookmarkCount, commentCount, latestBookmarks, isAdmin] = await Promise.all([
+  const [bookmarkCount, commentCount, userBookmarks, isAdmin] = await Promise.all([
     Bookmark.countDocuments({ user: user._id }),
     Bookmark.aggregate([
       { $match: { user: user._id } },
@@ -62,7 +62,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     ]),
     Bookmark.find({ user: user._id })
       .sort({ createdAt: -1 })
-      .limit(20)
       .select("title url description tags categories score commentCount createdAt")
       .lean(),
     userHasAdminAccess(user),
@@ -299,20 +298,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <BookOpen className="text-emerald-600" size={20} />
-                <h2 className="font-bold">Your listings</h2>
+                <h2 className="font-bold">Your listings ({bookmarkCount})</h2>
               </div>
               <Link href="/" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
                 Add new
               </Link>
             </div>
             <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
-              {latestBookmarks.length === 0 ? (
+              {userBookmarks.length === 0 ? (
                 <div className="p-6 text-center text-sm text-slate-500">
                   No bookmarks yet. Start by publishing your first useful link.
                 </div>
               ) : (
                 <div className="divide-y divide-slate-200">
-                  {latestBookmarks.map((bookmark) => (
+                  {userBookmarks.map((bookmark) => (
                     <article
                       key={bookmark._id.toString()}
                       className="grid gap-4 p-4"
