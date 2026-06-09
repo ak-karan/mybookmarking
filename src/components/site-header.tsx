@@ -1,4 +1,4 @@
-import { Link2 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { auth } from "../lib/auth";
 import { DashboardButton, SignInButton, SignOutButton } from "./auth-buttons";
@@ -12,12 +12,16 @@ export async function SiteHeader({ subtitle = "Useful corners of the internet" }
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-100">
-              <Link2 size={21} />
-            </span>
-            <span>
-              <span className="block text-lg font-bold tracking-tight">LinkHive</span>
-              <span className="block text-xs text-slate-500">{subtitle}</span>
+            <Image
+              src="/logo.jpg"
+              alt="MyBookmark"
+              width={260}
+              height={70}
+              priority
+              className="h-auto w-[186px]"
+            />
+            <span className="hidden text-xs text-slate-500 sm:block">
+              {subtitle}
             </span>
           </Link>
         </div>

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LinkHive",
+  title: "MyBookmark",
   description: "Discover, save, discuss, and vote on useful links.",
 };
 

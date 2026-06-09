@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Sparkles } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { createBookmark } from "../app/actions";
 
 type Metadata = {
@@ -11,53 +11,92 @@ type Metadata = {
 };
 
 export function UrlBookmarkForm() {
+  const formRef = useRef<HTMLFormElement>(null);
   const [url, setUrl] = useState("");
+  const [fetchedUrl, setFetchedUrl] = useState("");
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [error, setError] = useState("");
+  const [inputResetKey, setInputResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function fetchDetails() {
     setError("");
     setMetadata(null);
 
-    if (!url.trim()) {
+    const submittedUrl = url.trim();
+
+    if (!submittedUrl) {
       setError("Please enter a URL.");
       return;
     }
 
     startTransition(async () => {
-      const response = await fetch("/api/fetch-metadata", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await response.json();
+      try {
+        const response = await fetch("/api/fetch-metadata", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: submittedUrl }),
+        });
+        const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.error ?? "Unable to fetch URL details.");
-        return;
+        if (!response.ok) {
+          setError(data.error ?? "Unable to fetch URL details.");
+          return;
+        }
+
+        setFetchedUrl(submittedUrl);
+        setMetadata(data);
+        setUrl("");
+      } catch {
+        setError("Unable to fetch URL details.");
       }
-
-      setMetadata(data);
     });
   }
 
+  async function submitBookmark(formData: FormData) {
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      await createBookmark(formData);
+      setUrl("");
+      setFetchedUrl("");
+      setMetadata(null);
+      formRef.current?.reset();
+      setInputResetKey((key) => key + 1);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to submit the bookmark."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
-    <form action={createBookmark} className="space-y-3">
+    <form ref={formRef} action={submitBookmark} autoComplete="off" className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
-          name="url"
+          key={inputResetKey}
           type="url"
-          required
+          autoComplete="off"
+          required={!fetchedUrl}
           value={url}
-          onChange={(event) => setUrl(event.target.value)}
+          onChange={(event) => {
+            setUrl(event.target.value);
+            setFetchedUrl("");
+            setMetadata(null);
+          }}
           placeholder="https://example.com/useful-page"
           className="h-11 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
         />
         <button
           type="button"
           onClick={fetchDetails}
-          disabled={isPending}
+          disabled={isPending || isSubmitting}
           className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? <Loader2 className="animate-spin" size={17} /> : <Sparkles size={17} />}
@@ -87,13 +126,18 @@ export function UrlBookmarkForm() {
         </p>
       )}
 
+      <input type="hidden" name="url" value={url.trim() || fetchedUrl} />
       <input type="hidden" name="title" value={metadata?.title ?? ""} />
       <input type="hidden" name="description" value={metadata?.description ?? ""} />
       <input type="hidden" name="tags" value={metadata?.keywords.join(", ") ?? ""} />
       <input type="hidden" name="categories" value="general" />
 
-      <button className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">
-        Submit listing
+      <button
+        disabled={isPending || isSubmitting || (!url.trim() && !fetchedUrl)}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSubmitting && <Loader2 className="animate-spin" size={17} />}
+        {isSubmitting ? "Submitting..." : "Submit listing"}
       </button>
     </form>
   );
