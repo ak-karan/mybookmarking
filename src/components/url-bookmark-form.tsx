@@ -3,6 +3,7 @@
 import { Loader2, Sparkles } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { createBookmark } from "../app/actions";
+import { bookmarkCategories } from "../lib/categories";
 
 type Metadata = {
   title: string;
@@ -19,12 +20,14 @@ export function UrlBookmarkForm() {
   const [keywords, setKeywords] = useState("");
   const [category, setCategory] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [inputResetKey, setInputResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function fetchDetails() {
     setError("");
+    setSuccess("");
 
     const submittedUrl = url.trim();
 
@@ -60,6 +63,7 @@ export function UrlBookmarkForm() {
 
   async function submitBookmark(formData: FormData) {
     setError("");
+    setSuccess("");
     setIsSubmitting(true);
 
     try {
@@ -78,6 +82,7 @@ export function UrlBookmarkForm() {
       setCategory("");
       formRef.current?.reset();
       setInputResetKey((key) => key + 1);
+      setSuccess("Your listing has been published.");
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -123,14 +128,20 @@ export function UrlBookmarkForm() {
         <span className="mb-1.5 block text-xs font-semibold text-slate-600">
           Category <span className="text-rose-600">*</span>
         </span>
-        <input
+        <select
           name="categories"
           required
           value={category}
           onChange={(event) => setCategory(event.target.value)}
-          placeholder="technology"
           className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400"
-        />
+        >
+          <option value="">Select a category</option>
+          {bookmarkCategories.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
       </label>
 
       <label className="block">
@@ -178,6 +189,20 @@ export function UrlBookmarkForm() {
           {error}
         </p>
       )}
+
+      {success && (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+          {success}
+        </p>
+      )}
+
+      <label className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <input name="policyAccepted" type="checkbox" required className="mt-0.5 size-4" />
+        <span className="text-xs leading-5 text-slate-600">
+          I confirm this listing is lawful, safe, and does not contain illegal, abusive,
+          fraudulent, pirated, or harmful content.
+        </span>
+      </label>
 
       <input type="hidden" name="url" value={url.trim() || fetchedUrl} />
 

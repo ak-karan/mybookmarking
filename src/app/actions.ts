@@ -3,6 +3,8 @@
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { auth } from "../lib/auth";
+import { normalizeCategory } from "../lib/categories";
+import { containsProhibitedContent } from "../lib/content-policy";
 import { fetchUrlMetadata, normalizeUrl } from "../lib/metadata";
 import connectDB from "../lib/mongodb";
 import Bookmark from "../models/Bookmark";
@@ -62,12 +64,19 @@ export async function createBookmark(formData: FormData) {
   const rawUrl = text(formData, "url");
   let description = text(formData, "description");
   let tags = list(formData, "tags");
-  const categories = list(formData, "categories");
+  const selectedCategory = normalizeCategory(text(formData, "categories"));
 
-  if (categories.length === 0) {
+  if (!selectedCategory) {
     return {
       ok: false as const,
-      error: "Category is required.",
+      error: "Please select a valid category.",
+    };
+  }
+
+  if (text(formData, "policyAccepted") !== "on") {
+    return {
+      ok: false as const,
+      error: "You must confirm the content policy before submitting.",
     };
   }
 
@@ -93,13 +102,20 @@ export async function createBookmark(formData: FormData) {
     throw new Error("Title must be between 3 and 160 characters.");
   }
 
+  if (containsProhibitedContent([normalizedUrl, title, description, tags.join(" ")])) {
+    return {
+      ok: false as const,
+      error: "This listing appears to violate the content policy.",
+    };
+  }
+
   try {
     await Bookmark.create({
       title,
       url: normalizedUrl,
       description,
       tags,
-      categories,
+      categories: [selectedCategory.toLowerCase()],
       user: user._id,
     });
   } catch (error) {

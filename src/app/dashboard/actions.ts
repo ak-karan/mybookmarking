@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
 import { requireCurrentUser } from "../../lib/access";
+import { normalizeCategory } from "../../lib/categories";
+import { containsProhibitedContent } from "../../lib/content-policy";
 import { normalizeUrl } from "../../lib/metadata";
 import Bookmark from "../../models/Bookmark";
 import Comment from "../../models/Comment";
@@ -132,9 +134,18 @@ export async function updateUserBookmark(bookmarkId: string, formData: FormData)
   const title = text(formData, "title");
   const description = text(formData, "description");
   const url = normalizeUrl(text(formData, "url"));
+  const category = normalizeCategory(text(formData, "categories"));
 
   if (title.length < 3 || title.length > 160) {
     throw new Error("Title must be between 3 and 160 characters.");
+  }
+
+  if (!category) {
+    throw new Error("Please select a valid category.");
+  }
+
+  if (containsProhibitedContent([title, description, url])) {
+    throw new Error("This listing appears to contain prohibited content.");
   }
 
   await Bookmark.findOneAndUpdate(
@@ -144,7 +155,7 @@ export async function updateUserBookmark(bookmarkId: string, formData: FormData)
       url,
       description: description.slice(0, 500),
       tags: list(formData, "tags"),
-      categories: list(formData, "categories"),
+      categories: [category.toLowerCase()],
     }
   );
 

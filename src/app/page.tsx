@@ -1,11 +1,8 @@
-import { BookmarkPlus, ExternalLink, MessageCircle, Trophy } from "lucide-react";
+import { Clock3, ExternalLink, FolderKanban, MessageCircle, Trophy } from "lucide-react";
 import Link from "next/link";
 import { SiteHeader } from "../components/site-header";
-import { UrlBookmarkForm } from "../components/url-bookmark-form";
-import { auth } from "../lib/auth";
 import connectDB from "../lib/mongodb";
 import Bookmark from "../models/Bookmark";
-import User from "../models/User";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -27,6 +24,11 @@ type FeedBookmark = {
   commentCount: number;
   createdAt: Date;
   user: FeedUser;
+};
+
+type CategoryCount = {
+  _id: string;
+  count: number;
 };
 
 function param(value: string | string[] | undefined) {
@@ -147,43 +149,55 @@ function BookmarkList({ bookmarks }: { bookmarks: FeedBookmark[] }) {
 export default async function Home({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const page = Math.max(1, Number.parseInt(param(params.page), 10) || 1);
+  const category = param(params.category).trim().toLowerCase();
   const pageSize = 10;
-  let session: Awaited<ReturnType<typeof auth>> = null;
-  let currentUser = null;
   let topBookmarks: FeedBookmark[] = [];
   let recentBookmarks: FeedBookmark[] = [];
+  let sidebarRecent: FeedBookmark[] = [];
+  let topCategories: CategoryCount[] = [];
   let totalPages = 1;
 
   try {
-    session = await auth();
     await connectDB();
-    currentUser = session?.user?.email
-      ? await User.findOne({ email: session.user.email.toLowerCase() }).select("_id").lean()
-      : null;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to connect to MongoDB.";
     return databaseSetupView(message);
   }
 
   try {
-    const [topRaw, recentRaw, totalRecent] = await Promise.all([
+    const feedFilter = category ? { categories: category } : {};
+    const [topRaw, recentRaw, sidebarRaw, categoryCounts, totalRecent] = await Promise.all([
       Bookmark.find({})
         .populate("user", "name email")
         .sort({ score: -1, savedCount: -1, createdAt: -1 })
         .limit(10)
         .lean(),
-      Bookmark.find({})
+      Bookmark.find(feedFilter)
         .populate("user", "name email")
         .sort({ createdAt: -1 })
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .lean(),
-      Bookmark.countDocuments(),
+      Bookmark.find({})
+        .populate("user", "name email")
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .lean(),
+      Bookmark.aggregate<CategoryCount>([
+        { $unwind: "$categories" },
+        { $match: { categories: { $type: "string", $ne: "" } } },
+        { $group: { _id: "$categories", count: { $sum: 1 } } },
+        { $sort: { count: -1, _id: 1 } },
+        { $limit: 10 },
+      ]),
+      Bookmark.countDocuments(feedFilter),
     ]);
 
     totalPages = Math.max(1, Math.ceil(totalRecent / pageSize));
     topBookmarks = normalizeBookmarks(topRaw);
     recentBookmarks = normalizeBookmarks(recentRaw);
+    sidebarRecent = normalizeBookmarks(sidebarRaw);
+    topCategories = categoryCounts;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to read from MongoDB.";
     return databaseSetupView(message);
@@ -205,7 +219,9 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
 
           <section>
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-bold tracking-tight">Recently bookmarks</h2>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {category ? `${category} listings` : "Recent bookmarks"}
+              </h2>
               <span className="text-sm text-slate-500">10 per page</span>
             </div>
             <BookmarkList bookmarks={recentBookmarks} />
@@ -213,7 +229,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             {totalPages > 1 && (
               <nav className="mt-5 flex items-center justify-between border-t border-slate-200 pt-5">
                 <Link
-                  href={`/?page=${Math.max(1, page - 1)}`}
+                  href={`/?page=${Math.max(1, page - 1)}${category ? `&category=${encodeURIComponent(category)}` : ""}`}
                   aria-disabled={page <= 1}
                   className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
                     page <= 1
@@ -227,7 +243,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
                   Page {page} of {totalPages}
                 </span>
                 <Link
-                  href={`/?page=${Math.min(totalPages, page + 1)}`}
+                  href={`/?page=${Math.min(totalPages, page + 1)}${category ? `&category=${encodeURIComponent(category)}` : ""}`}
                   aria-disabled={page >= totalPages}
                   className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
                     page >= totalPages
@@ -243,30 +259,53 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
         </section>
 
         <aside className="space-y-5">
-          {session && currentUser ? (
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <BookmarkPlus className="text-indigo-600" size={20} />
-                <h2 className="font-bold">Submit a bookmark</h2>
-              </div>
-              <div className="mt-4">
-                <UrlBookmarkForm />
-              </div>
-            </section>
-          ) : (
-            <section className="rounded-2xl border border-indigo-100 bg-white p-6 text-center shadow-sm">
-              <h2 className="text-lg font-bold">Join the community</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Sign in to submit links, vote, comment, and build your public profile.
-              </p>
-              <Link
-                href="/auth"
-                className="mt-5 inline-flex rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
-                Sign in
-              </Link>
-            </section>
-          )}
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="text-indigo-600" size={20} />
+              <h2 className="font-bold">Top categories</h2>
+            </div>
+            <div className="mt-4 divide-y divide-slate-100">
+              {topCategories.map((item) => (
+                <Link
+                  key={item._id}
+                  href={`/?category=${encodeURIComponent(item._id)}`}
+                  className={`flex items-center justify-between gap-3 py-2.5 text-sm hover:text-indigo-600 ${
+                    category === item._id ? "font-semibold text-indigo-700" : "text-slate-600"
+                  }`}
+                >
+                  <span className="capitalize">{item._id}</span>
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-500">
+                    {item.count}
+                  </span>
+                </Link>
+              ))}
+              {topCategories.length === 0 && (
+                <p className="py-4 text-sm text-slate-500">No categories yet.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Clock3 className="text-emerald-600" size={20} />
+              <h2 className="font-bold">Recent listings</h2>
+            </div>
+            <div className="mt-4 divide-y divide-slate-100">
+              {sidebarRecent.map((bookmark) => (
+                <article key={bookmark._id} className="py-3">
+                  <a
+                    href={bookmark.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900 hover:text-indigo-600"
+                  >
+                    {bookmark.title}
+                  </a>
+                  <p className="mt-1 text-xs text-slate-400">{formatDate(bookmark.createdAt)}</p>
+                </article>
+              ))}
+            </div>
+          </section>
         </aside>
       </div>
     </main>

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BookmarkPlus } from "lucide-react";
 import { auth } from "../lib/auth";
 import { DashboardButton, SignInButton, SignOutButton } from "./auth-buttons";
 
@@ -41,6 +42,13 @@ export async function SiteHeader() {
             className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950"
           >
             Contact
+          </Link>
+          <Link
+            href="/submit"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            <BookmarkPlus size={16} />
+            Submit
           </Link>
           {isAdmin && (
             <Link

@@ -16,6 +16,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardButton, SignOutButton } from "../../components/auth-buttons";
 import { requireCurrentUser, userHasAdminAccess } from "../../lib/access";
+import { bookmarkCategories } from "../../lib/categories";
 import Bookmark from "../../models/Bookmark";
 import User from "../../models/User";
 import {
@@ -388,12 +389,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
                             className="resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
                           />
                           <div className="grid gap-3 sm:grid-cols-2">
-                            <input
+                            <select
                               name="categories"
-                              defaultValue={bookmark.categories.join(", ")}
-                              placeholder="Categories"
+                              required
+                              defaultValue={bookmark.categories[0] ?? "general"}
                               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
-                            />
+                            >
+                              {bookmarkCategories.map((category) => (
+                                <option key={category} value={category.toLowerCase()}>
+                                  {category}
+                                </option>
+                              ))}
+                            </select>
                             <input
                               name="tags"
                               defaultValue={bookmark.tags.join(", ")}
