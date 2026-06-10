@@ -1,6 +1,13 @@
 import { Mail, MessageSquare } from "lucide-react";
+import type { Metadata } from "next";
 import { SiteHeader } from "../../components/site-header";
 import { submitContactQuery } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Contact MyBookmark support about accounts, listings, and community features.",
+  alternates: { canonical: "/contact" },
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -14,7 +21,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <SiteHeader subtitle="Contact support" />
+      <SiteHeader />
       <div className="mx-auto max-w-3xl px-5 py-8">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3">

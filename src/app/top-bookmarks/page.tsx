@@ -1,8 +1,15 @@
 import { ExternalLink, Trophy } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "../../components/site-header";
 import connectDB from "../../lib/mongodb";
 import Bookmark from "../../models/Bookmark";
+
+export const metadata: Metadata = {
+  title: "Top Bookmarks",
+  description: "Browse highly rated useful links shared by the MyBookmark community.",
+  alternates: { canonical: "/top-bookmarks" },
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -33,7 +40,7 @@ export default async function TopBookmarksPage({ searchParams }: { searchParams:
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <SiteHeader subtitle="Top community bookmarks" />
+      <SiteHeader />
       <div className="mx-auto max-w-5xl px-5 py-8">
         <div className="mb-5 flex items-center gap-2">
           <Trophy className="text-amber-600" size={24} />

@@ -1,8 +1,14 @@
 import { CheckCircle2, XCircle } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import connectDB from "../../lib/mongodb";
 import { hashVerificationToken } from "../../lib/verification";
 import User from "../../models/User";
+
+export const metadata: Metadata = {
+  title: "Verify Email",
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

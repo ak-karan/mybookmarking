@@ -42,7 +42,7 @@ export async function fetchUrlMetadata(rawUrl: string): Promise<UrlMetadata> {
   const url = normalizeUrl(rawUrl);
   const response = await fetch(url, {
     headers: {
-      "user-agent": "LinkHiveMetadataBot/1.0",
+      "user-agent": "MyBookmarkMetadataBot/1.0",
       accept: "text/html,application/xhtml+xml",
     },
     signal: AbortSignal.timeout(8000),

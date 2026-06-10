@@ -18,6 +18,8 @@ export interface IUser extends Document {
   emailVerified?: Date;
   emailVerificationTokenHash?: string;
   emailVerificationExpires?: Date;
+  passwordResetTokenHash?: string;
+  passwordResetExpires?: Date;
   authProvider: AuthProvider;
   role: UserRole;
   createdAt: Date;
@@ -40,6 +42,8 @@ const UserSchema = new mongoose.Schema<IUser>(
     emailVerified: { type: Date },
     emailVerificationTokenHash: { type: String, select: false },
     emailVerificationExpires: { type: Date, select: false },
+    passwordResetTokenHash: { type: String, select: false },
+    passwordResetExpires: { type: Date, select: false },
     authProvider: {
       type: String,
       enum: ["credentials", "google"],

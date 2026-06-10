@@ -120,7 +120,6 @@ export async function changePassword(formData: FormData) {
   }
 
   user.passwordHash = await bcrypt.hash(newPassword, 12);
-  user.authProvider = "credentials";
   await user.save();
 
   revalidatePath("/dashboard");

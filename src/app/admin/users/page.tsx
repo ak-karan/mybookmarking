@@ -1,18 +1,24 @@
 import {
   BookOpen,
   Calendar,
-  Link2,
   Mail,
   Search,
   ShieldCheck,
   UserRound,
   UsersRound,
 } from "lucide-react";
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { SignOutButton } from "../../../components/auth-buttons";
 import { requireAdmin } from "../../../lib/access";
 import Bookmark from "../../../models/Bookmark";
 import User from "../../../models/User";
+
+export const metadata: Metadata = {
+  title: "Customer Management",
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -69,13 +75,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white">
-              <Link2 size={21} />
-            </span>
-            <span>
-              <span className="block text-lg font-bold tracking-tight">LinkHive Admin</span>
-              <span className="block text-xs text-slate-500">Customer management</span>
-            </span>
+            <Image src="/logo.jpg" alt="MyBookmark" width={260} height={70} className="h-auto w-[180px]" />
           </Link>
           <div className="flex items-center gap-2">
             <Link

@@ -62,6 +62,14 @@ export async function createBookmark(formData: FormData) {
   const rawUrl = text(formData, "url");
   let description = text(formData, "description");
   let tags = list(formData, "tags");
+  const categories = list(formData, "categories");
+
+  if (categories.length === 0) {
+    return {
+      ok: false as const,
+      error: "Category is required.",
+    };
+  }
 
   let normalizedUrl = "";
   try {
@@ -91,7 +99,7 @@ export async function createBookmark(formData: FormData) {
       url: normalizedUrl,
       description,
       tags,
-      categories: list(formData, "categories"),
+      categories,
       user: user._id,
     });
   } catch (error) {

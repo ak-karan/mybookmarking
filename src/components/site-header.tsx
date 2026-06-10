@@ -3,7 +3,7 @@ import Link from "next/link";
 import { auth } from "../lib/auth";
 import { DashboardButton, SignInButton, SignOutButton } from "./auth-buttons";
 
-export async function SiteHeader({ subtitle = "Useful corners of the internet" }: { subtitle?: string }) {
+export async function SiteHeader() {
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
 
@@ -20,9 +20,6 @@ export async function SiteHeader({ subtitle = "Useful corners of the internet" }
               priority
               className="h-auto w-[186px]"
             />
-            <span className="hidden text-xs text-slate-500 sm:block">
-              {subtitle}
-            </span>
           </Link>
         </div>
 

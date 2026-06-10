@@ -4,24 +4,31 @@ import {
   ExternalLink,
   Globe2,
   KeyRound,
-  Link2,
   Mail,
   Pencil,
   ShieldCheck,
   Trash2,
   UserRound,
 } from "lucide-react";
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardButton, SignOutButton } from "../../components/auth-buttons";
 import { requireCurrentUser, userHasAdminAccess } from "../../lib/access";
 import Bookmark from "../../models/Bookmark";
+import User from "../../models/User";
 import {
   changePassword,
   deleteUserBookmark,
   updateDashboardProfile,
   updateUserBookmark,
 } from "./actions";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -54,7 +61,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
     redirect("/auth");
   }
 
-  const [bookmarkCount, commentCount, userBookmarks, isAdmin] = await Promise.all([
+  const [bookmarkCount, commentCount, userBookmarks, isAdmin, security] = await Promise.all([
     Bookmark.countDocuments({ user: user._id }),
     Bookmark.aggregate([
       { $match: { user: user._id } },
@@ -65,22 +72,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
       .select("title url description tags categories score commentCount createdAt")
       .lean(),
     userHasAdminAccess(user),
+    User.findById(user._id).select("+passwordHash authProvider").lean(),
   ]);
 
   const totalComments = Number(commentCount[0]?.total ?? 0);
+  const hasPassword = Boolean(security?.passwordHash);
 
   return (
     <main className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-indigo-600 text-white">
-              <Link2 size={21} />
-            </span>
-            <span>
-              <span className="block text-lg font-bold tracking-tight">LinkHive</span>
-              <span className="block text-xs text-slate-500">Account dashboard</span>
-            </span>
+            <Image src="/logo.jpg" alt="MyBookmark" width={260} height={70} className="h-auto w-[180px]" />
           </Link>
           <div className="flex items-center gap-2">
             <Link
@@ -123,6 +126,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
               <div className="flex items-center gap-2 text-slate-600">
                 <ShieldCheck size={16} />
                 {isAdmin ? "Admin access" : "Customer account"}
+              </div>
+              <div className="break-all font-mono text-xs text-slate-500">
+                Account ID: {user._id.toString()}
               </div>
             </div>
           </section>
@@ -251,20 +257,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
                 <KeyRound className="text-violet-600" size={20} />
-                <h2 className="font-bold">Password security</h2>
+                <h2 className="font-bold">
+                  {hasPassword ? "Password security" : "Create account password"}
+                </h2>
               </div>
+              {!hasPassword && (
+                <p className="mt-3 text-sm leading-6 text-slate-500">
+                  Your Google login stays active. Create a separate MyBookmark password to also sign in with email.
+                </p>
+              )}
               <form action={changePassword} className="mt-5 grid gap-4">
-                <label>
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-600">
-                    Current password
-                  </span>
-                  <input
-                    name="currentPassword"
-                    type="password"
-                    className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-400"
-                    placeholder="Required for email accounts"
-                  />
-                </label>
+                {hasPassword && (
+                  <label>
+                    <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Current password
+                    </span>
+                    <input
+                      name="currentPassword"
+                      type="password"
+                      required
+                      autoComplete="current-password"
+                      className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-400"
+                    />
+                  </label>
+                )}
                 <label>
                   <span className="mb-1.5 block text-xs font-semibold text-slate-600">New password</span>
                   <input
@@ -288,7 +304,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
                   />
                 </label>
                 <button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">
-                  Update password
+                  {hasPassword ? "Update password" : "Create password"}
                 </button>
               </form>
             </section>

@@ -1,4 +1,6 @@
-import { BookOpen, Calendar, Globe2, Link2, UserRound } from "lucide-react";
+import { BookOpen, Calendar, Globe2, UserRound } from "lucide-react";
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import mongoose from "mongoose";
@@ -7,6 +9,30 @@ import Bookmark from "../../../models/Bookmark";
 import User from "../../../models/User";
 
 type Params = Promise<{ id: string }>;
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { id } = await params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return { title: "Member Not Found" };
+  }
+
+  await connectDB();
+  const user = await User.findById(id).select("name bio").lean();
+
+  if (!user) {
+    return { title: "Member Not Found" };
+  }
+
+  const name = user.name ?? "MyBookmark member";
+
+  return {
+    title: `${name}'s Bookmarks`,
+    description:
+      user.bio?.slice(0, 160) ?? `Browse useful websites published by ${name} on MyBookmark.`,
+    alternates: { canonical: `/users/${id}` },
+  };
+}
 
 function formatDate(value?: Date | string) {
   if (!value) {
@@ -42,10 +68,7 @@ export default async function PublicUserPage({ params }: { params: Params }) {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
           <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-white">
-              <Link2 size={18} />
-            </span>
-            LinkHive
+            <Image src="/logo.jpg" alt="MyBookmark" width={260} height={70} className="h-auto w-[180px]" />
           </Link>
           <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-slate-950">
             Browse bookmarks
@@ -60,7 +83,7 @@ export default async function PublicUserPage({ params }: { params: Params }) {
               <UserRound size={34} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight">{user.name ?? "LinkHive member"}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{user.name ?? "MyBookmark member"}</h1>
               {user.bio && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{user.bio}</p>}
               <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500">
                 <span className="inline-flex items-center gap-1.5">

@@ -1,10 +1,17 @@
-import { BookOpen, Inbox, Link2, ShieldCheck, UsersRound } from "lucide-react";
+import { BookOpen, Inbox, ShieldCheck, UsersRound } from "lucide-react";
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { SignOutButton } from "../../components/auth-buttons";
 import { requireAdmin } from "../../lib/access";
 import Bookmark from "../../models/Bookmark";
 import ContactQuery from "../../models/ContactQuery";
 import User from "../../models/User";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+  robots: { index: false, follow: false },
+};
 
 function formatDate(value?: Date | string) {
   if (!value) {
@@ -36,13 +43,7 @@ export default async function AdminDashboardPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white">
-              <Link2 size={21} />
-            </span>
-            <span>
-              <span className="block text-lg font-bold tracking-tight">LinkHive Admin</span>
-              <span className="block text-xs text-slate-500">Secure dashboard</span>
-            </span>
+            <Image src="/logo.jpg" alt="MyBookmark" width={260} height={70} className="h-auto w-[180px]" />
           </Link>
           <div className="flex items-center gap-2">
             <Link

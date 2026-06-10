@@ -29,6 +29,7 @@ export async function POST(request: Request) {
   const email = value(body.email).toLowerCase();
   const password = value(body.password);
   const birthDateValue = value(body.birthDate);
+  const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "true";
 
   if (name.length < 2 || name.length > 80) {
     return NextResponse.json(
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (requireEmailVerification && !process.env.RESEND_API_KEY) {
     return NextResponse.json(
       { error: "Email verification service is not configured yet." },
       { status: 503 }
@@ -73,12 +74,29 @@ export async function POST(request: Request) {
   }
 
   await connectDB();
-  const existingUser = await User.findOne({ email }).select("_id authProvider");
+  const existingUser = await User.findOne({ email }).select("_id authProvider emailVerified");
 
   if (existingUser) {
+    if (
+      existingUser.authProvider === "credentials" &&
+      !existingUser.emailVerified &&
+      !requireEmailVerification
+    ) {
+      existingUser.name = name;
+      existingUser.birthDate = birthDate;
+      existingUser.passwordHash = await bcrypt.hash(password, 12);
+      existingUser.emailVerified = new Date();
+      await existingUser.save();
+
+      return NextResponse.json(
+        { message: "Account activated. You can sign in now.", requiresVerification: false },
+        { status: 200 }
+      );
+    }
+
     const message =
       existingUser.authProvider === "google"
-        ? "This email already uses Google sign-in."
+        ? "This email already uses Google sign-in. Sign in with Google, then create a MyBookmark password from your dashboard."
         : "An account with this email already exists.";
 
     return NextResponse.json({ error: message }, { status: 409 });
@@ -91,25 +109,32 @@ export async function POST(request: Request) {
     passwordHash,
     birthDate,
     authProvider: "credentials",
+    emailVerified: requireEmailVerification ? undefined : new Date(),
     role: isConfiguredAdmin(email) ? "admin" : "user",
   });
 
-  try {
-    await issueVerificationEmail(user);
-  } catch (error) {
-    console.error("Could not send verification email:", error);
-    return NextResponse.json(
-      {
-        error:
-          "Account created, but verification email could not be sent. Check email configuration and use resend verification.",
-      },
-      { status: 503 }
-    );
+  if (requireEmailVerification) {
+    try {
+      await issueVerificationEmail(user);
+    } catch (error) {
+      console.error("Could not send verification email:", error);
+      await User.findByIdAndDelete(user._id);
+      return NextResponse.json(
+        {
+          error:
+            "Verification email could not be sent. No account was created, so you can try again.",
+        },
+        { status: 503 }
+      );
+    }
   }
 
   return NextResponse.json(
     {
-      message: "Account created. Check your email to verify your account.",
+      message: requireEmailVerification
+        ? "Account created. Check your email to verify your account."
+        : "Account created. You can sign in now.",
+      requiresVerification: requireEmailVerification,
     },
     { status: 201 }
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { Calendar, KeyRound, LogIn, Mail, UserRound } from "lucide-react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useTransition } from "react";
@@ -36,18 +37,22 @@ export function AuthPanel() {
           }),
         });
 
-        const payload = (await response.json()) as { error?: string };
+        const payload = (await response.json()) as {
+          error?: string;
+          message?: string;
+          requiresVerification?: boolean;
+        };
 
         if (!response.ok) {
           setMessage(payload.error ?? "Could not create account.");
-          if (response.status === 503) {
-            setVerificationEmail(email);
-          }
           return;
         }
 
-        setVerificationEmail(email);
-        setMessage("Account created. Check your email and open the verification link.");
+        setVerificationEmail(payload.requiresVerification ? email : "");
+        setMessage(payload.message ?? "Account created. You can sign in now.");
+        if (!payload.requiresVerification) {
+          setMode("login");
+        }
         form.reset();
         return;
       }
@@ -92,7 +97,7 @@ export function AuthPanel() {
       <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
         <div className="bg-slate-950 p-8 text-white sm:p-10">
           <div className="inline-flex rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-slate-300">
-            LinkHive Accounts
+            MyBookmark Accounts
           </div>
           <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
             Build your bookmark profile.
@@ -198,7 +203,14 @@ export function AuthPanel() {
             )}
 
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold text-slate-600">Password</span>
+              <span className="mb-1.5 flex items-center justify-between gap-3 text-xs font-semibold text-slate-600">
+                Password
+                {mode === "login" && (
+                  <Link href="/reset-password" className="text-indigo-600 hover:text-indigo-500">
+                    Forgot password?
+                  </Link>
+                )}
+              </span>
               <span className="relative block">
                 <KeyRound className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input

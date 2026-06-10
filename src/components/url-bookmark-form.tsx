@@ -14,7 +14,10 @@ export function UrlBookmarkForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [url, setUrl] = useState("");
   const [fetchedUrl, setFetchedUrl] = useState("");
-  const [metadata, setMetadata] = useState<Metadata | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [category, setCategory] = useState("");
   const [error, setError] = useState("");
   const [inputResetKey, setInputResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
@@ -22,7 +25,6 @@ export function UrlBookmarkForm() {
 
   function fetchDetails() {
     setError("");
-    setMetadata(null);
 
     const submittedUrl = url.trim();
 
@@ -38,7 +40,7 @@ export function UrlBookmarkForm() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ url: submittedUrl }),
         });
-        const data = await response.json();
+        const data = (await response.json()) as Metadata & { error?: string };
 
         if (!response.ok) {
           setError(data.error ?? "Unable to fetch URL details.");
@@ -46,7 +48,9 @@ export function UrlBookmarkForm() {
         }
 
         setFetchedUrl(submittedUrl);
-        setMetadata(data);
+        setTitle(data.title ?? "");
+        setDescription(data.description ?? "");
+        setKeywords(Array.isArray(data.keywords) ? data.keywords.join(", ") : "");
         setUrl("");
       } catch {
         setError("Unable to fetch URL details.");
@@ -68,7 +72,10 @@ export function UrlBookmarkForm() {
 
       setUrl("");
       setFetchedUrl("");
-      setMetadata(null);
+      setTitle("");
+      setDescription("");
+      setKeywords("");
+      setCategory("");
       formRef.current?.reset();
       setInputResetKey((key) => key + 1);
     } catch (submitError) {
@@ -94,7 +101,9 @@ export function UrlBookmarkForm() {
           onChange={(event) => {
             setUrl(event.target.value);
             setFetchedUrl("");
-            setMetadata(null);
+            setTitle("");
+            setDescription("");
+            setKeywords("");
           }}
           placeholder="https://example.com/useful-page"
           className="h-11 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
@@ -110,21 +119,59 @@ export function UrlBookmarkForm() {
         </button>
       </div>
 
-      {metadata && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-          <p className="text-sm font-bold text-slate-950">{metadata.title}</p>
-          {metadata.description && (
-            <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-600">
-              {metadata.description}
-            </p>
-          )}
-          {metadata.keywords.length > 0 && (
-            <p className="mt-2 text-xs font-medium text-emerald-700">
-              {metadata.keywords.map((keyword) => `#${keyword}`).join(" ")}
-            </p>
-          )}
-        </div>
-      )}
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+          Category <span className="text-rose-600">*</span>
+        </span>
+        <input
+          name="categories"
+          required
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
+          placeholder="technology"
+          className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400"
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-semibold text-slate-600">Title (optional)</span>
+        <input
+          name="title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          maxLength={160}
+          placeholder="Custom listing title"
+          className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400"
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+          Description (optional)
+        </span>
+        <textarea
+          name="description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={3}
+          maxLength={500}
+          placeholder="Short description"
+          className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+          Keywords (optional)
+        </span>
+        <input
+          name="tags"
+          value={keywords}
+          onChange={(event) => setKeywords(event.target.value)}
+          placeholder="design, tools, inspiration"
+          className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400"
+        />
+      </label>
 
       {error && (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
@@ -133,13 +180,9 @@ export function UrlBookmarkForm() {
       )}
 
       <input type="hidden" name="url" value={url.trim() || fetchedUrl} />
-      <input type="hidden" name="title" value={metadata?.title ?? ""} />
-      <input type="hidden" name="description" value={metadata?.description ?? ""} />
-      <input type="hidden" name="tags" value={metadata?.keywords.join(", ") ?? ""} />
-      <input type="hidden" name="categories" value="general" />
 
       <button
-        disabled={isPending || isSubmitting || (!url.trim() && !fetchedUrl)}
+        disabled={isPending || isSubmitting || (!url.trim() && !fetchedUrl) || !category.trim()}
         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSubmitting && <Loader2 className="animate-spin" size={17} />}
